@@ -22,10 +22,24 @@ import retrofit2.http.Query;
 
 public class MainActivity extends AppCompatActivity {
 
+    private String user_id;
+    private Conditions conditions;
+
+    public static String LOG_TAG = "My log tag";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+    }
+
+
+    public void getWeather(View V){
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
+        //conditions = settings.getString("response",null);
+
+        String result="";
+
         HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
         // set your desired log level
         logging.setLevel(HttpLoggingInterceptor.Level.BODY);
@@ -34,38 +48,44 @@ public class MainActivity extends AppCompatActivity {
                 .build();
 
         Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("http://luca-teaching.appspot.com/weather/default/get_weather")
-                .addConverterFactory(GsonConverterFactory.create())	//parse Gson string
-                .client(httpClient)	//add logging
+                .baseUrl("http://luca-teaching.appspot.com/weather/default/get_weather/")
+                .addConverterFactory(GsonConverterFactory.create())    //parse Gson string
+                .client(httpClient)    //add logging
                 .build();
 
-        NicknameService service = retrofit.create(NicknameService.class);
+        WeatherService service = retrofit.create(WeatherService.class);
 
-        Call<RegistrationResponse> queryResponseCall =
-                service.registerUser(user_id, nickname);
+        Call<Response> queryResponseCall =
+                service.WeatherResponse(conditions, result);
 
         //Call retrofit asynchronously
-        queryResponseCall.enqueue(new Callback<RegistrationResponse>() {
+        queryResponseCall.enqueue(new Callback<Response>() {
             @Override
-            public void onResponse(Response<RegistrationResponse> response) {
+            public void onResponse(Response<Response> response) {
                 Log.i(LOG_TAG, "Code is: " + response.code());
-                Log.i(LOG_TAG, "The result is: " + response.body().response);
+                Log.i(LOG_TAG, "The result is: " + response.body().toString());// response.body().response in class example
             }
 
             @Override
             public void onFailure(Throwable t) {
                 // Log error here since request failed
             }
-    }
+        });
 
-    public void getWeather(View V){
-        Intent intent = new Intent(this,WeatherStatus.class);
+        Gson gson = new Gson();
+        String s = gson.toJson(conditions);
+        Log.i(LOG_TAG,"Json string: "+ s);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor e = prefs.edit();
+        e.putString("myprefs",s);
+        e.commit();
+        Intent intent = new Intent(this,SecondActivity.class);
         startActivity(intent);
-
     }
-    public interface NicknameService {
-        @GET("default/register_user")
-        Call<RegistrationResponse> registerUser(@Query("user_id") String user_id,
-                                                @Query("nickname") String nickname);
+
+    public interface WeatherService {
+     @GET("default/get_weather")
+        Call<Response> WeatherResponse(@Query("conditions") Conditions conditions,
+                                @Query("result") String result);
     }
 }
